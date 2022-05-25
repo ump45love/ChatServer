@@ -25,6 +25,7 @@ public class Server {
 	void ConnectClients() {
 		System.out.println("asdasd");
 		userList = new ArrayList<ServerThread>();
+		chatRoomList = new ArrayList<ChatRoom>();
 		try {serverSocket = new ServerSocket(port);} 
 		catch (IOException e1) {e1.printStackTrace();}
 		while(true) {

@@ -55,7 +55,8 @@ public class ServerThread extends Thread {
 	void readMessage() {
 		try {
 			String read = in.readLine();
-			GetMessage(read);
+			if(read != null)
+				GetMessage(read);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -63,6 +64,7 @@ public class ServerThread extends Thread {
 	}
 	
 	void GetMessage(String msg) {
+		System.out.println("호로로롤" + msg);
 		switch (msg.charAt(0)) {
 		case (CHAT):
 			if(state == State.CONNECT_ROOM)
@@ -78,7 +80,7 @@ public class ServerThread extends Thread {
 			break;
 		case (ROOM_CREATE):
 			if(state == State.WAITING)
-				CreateChatRoom() ;
+				CreateChatRoom();
 			break;
 		case (ROOM_CONNECT):
 			if(state == State.WAITING) {
@@ -99,6 +101,7 @@ public class ServerThread extends Thread {
 	void sendMessageToClient(String msg) {
 		List<ServerThread> array = userList.stream().filter(s -> s.chatRoomNumber == this.chatRoomNumber).collect(Collectors.toList());
 		array.forEach(s -> SendMessage(msg));
+		System.out.println(msg+"메시지 송신 수신");
 	}
 	
 	//
@@ -115,20 +118,22 @@ public class ServerThread extends Thread {
 	
 	
 	void CreateChatRoom() {
-		ChatRoom roomNumber = Collections.max(chatRoomList);
-		chatRoomList.add(roomNumber);
-		GetMessage((ROOM_CONNECT+""+roomNumber.getRoomNumber()));
+		if(chatRoomList.size() == 0) {
+			chatRoomList.add(new ChatRoom(1,1,"asd"));
+		}
+		else {
+			chatRoomList.add(new ChatRoom(Collections.max(chatRoomList).getRoomNumber()+1,1,"asd"));
+		}
+		String num = Integer.toString(chatRoomList.get(chatRoomList.size()-1).getRoomNumber());
+		GetMessage(ROOM_CONNECT+num);
+		System.out.println("방생성");
 	}
 	
 	void ConnectChatRoom(int chatRoomNumber) {
-		if(chatRoomList.contains(chatRoomNumber)) {
 			state = State.CONNECT_ROOM;
 			this.chatRoomNumber = chatRoomNumber;
 			sendMessageToClient(ConnectChatRoomMessage());
-		}
-		else {
-			//연결실패
-		}
+			System.out.println("방연결");
 	}
 
 
@@ -142,7 +147,7 @@ public class ServerThread extends Thread {
 		 while(true) {
 			 try {Thread.sleep(10);} catch (InterruptedException e) 
 			 {e.printStackTrace();}
-			 read.start();
+			 readMessage();
 		 }
 	  }
 

@@ -9,6 +9,11 @@ public class ChatRoom implements Comparable<ChatRoom >{
 		roomNumber = 0;
 		passWord = 0;
 		roomName =null;
+	}	
+	ChatRoom(int num,int passWord,String name){
+		roomNumber = num;
+		this.passWord = passWord;
+		roomName = name;
 	}
 	
 	void setChatRoom(int num,int passWord,String name) {
@@ -17,6 +22,9 @@ public class ChatRoom implements Comparable<ChatRoom >{
 		roomName = name;
 	}
 	
+	void setRoomNumber(int roomNumber) {
+		this.roomNumber = roomNumber;
+	}
 	int getRoomNumber() {
 		return roomNumber;
 	}
@@ -32,5 +40,6 @@ public class ChatRoom implements Comparable<ChatRoom >{
 		// TODO Auto-generated method stub
 		return this.roomNumber - o.roomNumber;
 	}
+	
 
 }

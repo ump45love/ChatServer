@@ -2,21 +2,21 @@ package Network;
 
 public class ChatRoom implements Comparable<ChatRoom >{
 	private int roomNumber;
-	private int passWord;
+	private String passWord;
 	private String roomName;
 	
 	ChatRoom(){
 		roomNumber = 0;
-		passWord = 0;
+		passWord = null;
 		roomName =null;
 	}	
-	ChatRoom(int num,int passWord,String name){
+	ChatRoom(int num,String passWord,String name){
 		roomNumber = num;
 		this.passWord = passWord;
 		roomName = name;
 	}
 	
-	void setChatRoom(int num,int passWord,String name) {
+	void setChatRoom(int num,String passWord,String name) {
 		roomNumber = num;
 		this.passWord = passWord;
 		roomName = name;
@@ -28,7 +28,7 @@ public class ChatRoom implements Comparable<ChatRoom >{
 	int getRoomNumber() {
 		return roomNumber;
 	}
-	int getPassWord() {
+	String getPassWord() {
 		return passWord;
 	}
 	String getRoomName() {

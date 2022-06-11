@@ -14,7 +14,9 @@ public class Server {
 	ArrayList<ServerThread> userList;
 	ArrayList<ChatRoom> chatRoomList;
 	Socket clientSocket;
+	Socket clientImageSocket;
 	ServerSocket serverSocket;
+	ServerSocket serverImageSocket;
 	int port;
 	
 	
@@ -23,17 +25,17 @@ public class Server {
 		port = port_;
 	}
 	void ConnectClients() {
-		System.out.println("asdasd");
 		userList = new ArrayList<ServerThread>();
 		chatRoomList = new ArrayList<ChatRoom>();
-		try {serverSocket = new ServerSocket(port);} 
+		try {serverSocket = new ServerSocket(port);
+			serverImageSocket = new ServerSocket(port+1);
+			} 
 		catch (IOException e1) {e1.printStackTrace();}
 		while(true) {
 			try {
-				System.out.println("asdasdasdasdasdasdasd");
-				Socket clientSocket = serverSocket.accept();
-				System.out.println("qqqqqqqqqqqqqqq");
-				ServerThread thread = new ServerThread(clientSocket,userList,chatRoomList);
+				clientSocket = serverSocket.accept();
+				clientImageSocket = serverImageSocket.accept();
+				ServerThread thread = new ServerThread(clientSocket,clientImageSocket,userList,chatRoomList);
 				userList.add(thread);
 				thread.start();
 			} catch (IOException e) {

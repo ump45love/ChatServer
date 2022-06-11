@@ -1,6 +1,8 @@
 package Network;
 
 import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -12,6 +14,12 @@ import java.util.stream.Collectors;
 
 public class ServerThread extends Thread {
 	public enum State {WAITING,CONNECT_ROOM}
+	public static final byte GET_MESSAGE = 0;
+	public static final byte SIGN_UP = 1;
+	public static final byte CREATE_ROOM= 2;
+	public static final byte GET_ROOM_LIST = 3;
+	public static final char GET_IMAGE = 0;
+	public static final char GET_USER_LIST = 1;
 	  public static final char CHAT = 'a';
 	  public static final char IMAGE = 'b';
 	  public static final char USER_DATA = 'c';
@@ -22,16 +30,20 @@ public class ServerThread extends Thread {
 
 	ArrayList<ServerThread> userList;
 	ArrayList<ChatRoom> chatRoomList;
-	BufferedReader in;
-	PrintWriter out;
+	DataInputStream in;
+	DataOutputStream out;
+	DataInputStream imageIn;
+	DataOutputStream imageOut;
 	int chatRoomNumber;
 	State state;
 	Socket clientSocket;
+	Socket clientImageSocket;
 	String nickName;
 	
 	
-	ServerThread(Socket socket,ArrayList<ServerThread> userList,ArrayList<ChatRoom> chatRoomList){
+	ServerThread(Socket socket,Socket imageSocket,ArrayList<ServerThread> userList,ArrayList<ChatRoom> chatRoomList){
 		clientSocket = socket;
+		clientImageSocket = imageSocket;
 		this.userList = userList;
 		this.chatRoomNumber = 0;
 		this.chatRoomList = chatRoomList;
@@ -39,8 +51,10 @@ public class ServerThread extends Thread {
 	}
 	void ConnectClient(){
 		try {
-			out = new PrintWriter(clientSocket.getOutputStream());
-			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			out = new DataOutputStream(clientSocket.getOutputStream());
+			in = new DataInputStream(clientSocket.getInputStream());
+			imageOut = new DataOutputStream(clientSocket.getOutputStream());
+			imageIn = new DataInputStream(clientSocket.getInputStream());
 			state = State.WAITING; 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -49,18 +63,77 @@ public class ServerThread extends Thread {
 	}
 	
 	void SendMessage(String msg) {
-		out.write(msg+"\n");
-		out.flush();
-	}	
-	void readMessage() {
+		byte[] data = msg.getBytes();
 		try {
-			String read = in.readLine();
-			if(read != null)
-				GetMessage(read);
+			out.writeByte(GET_MESSAGE);
+			out.write(data.length);
+			out.write(data);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}	
+	
+	
+	synchronized public void recievImage() {
+		int type = 0;
+		try {
+			type = imageIn.readByte();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		switch(type) {
+			case GET_IMAGE:
+				break;
+			case GET_USER_LIST:
+				break;
+		}
+		
+	}
+	
+	synchronized public void recievString() {
+		try {
+			int type = in.readByte();
+			switch(type) {
+				case GET_MESSAGE:
+					sendMessageToClient(receiveString());
+				break;
+				case SIGN_UP:
+				break;
+				case CREATE_ROOM:
+					 receiveCreateRoom();
+				break;
+				case GET_ROOM_LIST:
+
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	String receiveString() {
+		try {
+			return in.readLine();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	void receiveCreateRoom() {
+		String name =null;
+		String ps = null;
+		try {
+			name = in.readLine();
+			ps = in.readLine();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		ConnectChatRoom(CreateChatRoom(name, ps));
+		ConnectChatRoomMessage();
 	}
 	
 	void GetMessage(String msg) {
@@ -80,7 +153,6 @@ public class ServerThread extends Thread {
 			break;
 		case (ROOM_CREATE):
 			if(state == State.WAITING)
-				CreateChatRoom();
 			break;
 		case (ROOM_CONNECT):
 			if(state == State.WAITING) {
@@ -101,7 +173,6 @@ public class ServerThread extends Thread {
 	void sendMessageToClient(String msg) {
 		List<ServerThread> array = userList.stream().filter(s -> s.chatRoomNumber == this.chatRoomNumber).collect(Collectors.toList());
 		array.forEach(s -> SendMessage(msg));
-		System.out.println(msg+"메시지 송신 수신");
 	}
 	
 	//
@@ -117,23 +188,21 @@ public class ServerThread extends Thread {
 	//
 	
 	
-	void CreateChatRoom() {
+	int CreateChatRoom(String name, String ps) {
 		if(chatRoomList.size() == 0) {
-			chatRoomList.add(new ChatRoom(1,1,"asd"));
+			chatRoomList.add(new ChatRoom(1,ps,name));
 		}
 		else {
-			chatRoomList.add(new ChatRoom(Collections.max(chatRoomList).getRoomNumber()+1,1,"asd"));
+			chatRoomList.add(new ChatRoom(Collections.max(chatRoomList).getRoomNumber()+1,ps,name));
 		}
-		String num = Integer.toString(chatRoomList.get(chatRoomList.size()-1).getRoomNumber());
-		GetMessage(ROOM_CONNECT+num);
-		System.out.println("방생성");
+		return chatRoomList.get(chatRoomList.size()-1).getRoomNumber();
 	}
+	
 	
 	void ConnectChatRoom(int chatRoomNumber) {
 			state = State.CONNECT_ROOM;
 			this.chatRoomNumber = chatRoomNumber;
 			sendMessageToClient(ConnectChatRoomMessage());
-			System.out.println("방연결");
 	}
 
 
@@ -143,11 +212,10 @@ public class ServerThread extends Thread {
 
 	 @Override
 	  public void run() {
-		 Thread read = new Thread(() -> readMessage());
 		 while(true) {
 			 try {Thread.sleep(10);} catch (InterruptedException e) 
 			 {e.printStackTrace();}
-			 readMessage();
+			 recievString();
 		 }
 	  }
 

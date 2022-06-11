@@ -97,9 +97,10 @@ public class ServerThread extends Thread {
 			int type = in.readByte();
 			switch(type) {
 				case GET_MESSAGE:
-					sendMessageToClient(receiveString());
+					sendMessageToClient(receiveChat());
 				break;
 				case SIGN_UP:
+					receiveSignUp();
 				break;
 				case CREATE_ROOM:
 					 receiveCreateRoom();
@@ -113,7 +114,7 @@ public class ServerThread extends Thread {
 		}
 	}
 	
-	String receiveString() {
+	String receiveChat() {
 		try {
 			return in.readLine();
 		} catch (IOException e) {
@@ -136,6 +137,9 @@ public class ServerThread extends Thread {
 		ConnectChatRoomMessage();
 	}
 	
+	void receiveSignUp() {
+		
+	}
 	void GetMessage(String msg) {
 		System.out.println("호로로롤" + msg);
 		switch (msg.charAt(0)) {

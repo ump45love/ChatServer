@@ -21,10 +21,10 @@ public class Server {
 	
 	
 	int PortNumber;
-	Server(int port_){
+	public Server(int port_){
 		port = port_;
 	}
-	void ConnectClients() {
+	public void ConnectClients() {
 		userList = new ArrayList<ServerThread>();
 		chatRoomList = new ArrayList<ChatRoom>();
 		try {serverSocket = new ServerSocket(port);

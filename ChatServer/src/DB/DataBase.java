@@ -21,9 +21,10 @@ public class DataBase {
 		}
 	}
 	
-	boolean InsertData(String id, String ps) {
+	public boolean InsertData(String id, String ps) {
 		String sha = testSHA256(ps);
-		String s = "INSERT INTO userData (user_id, user_ps) VALUES ('" + id + "','" + sha+"');";
+		System.out.println(sha.length());
+		String s = "INSERT INTO data (userID, userPS) VALUES ('" + id + "','" + sha+"');";
 		try {
 			int i = stmt.executeUpdate(s);
 			return i==1;
@@ -34,8 +35,8 @@ public class DataBase {
 		}
 	}
 	
-	boolean ImageInsert(String id,String dir) {
-		String s = "UPDATE userData SET image =  " + "'"+dir+"' WHERE user_id = "+"'"+id+"';";
+	public boolean ImageInsert(String id,String dir) {
+		String s = "UPDATE data SET imageDIR =  " + "'"+dir+"' WHERE userID = "+"'"+id+"';";
 		try {
 			int i =stmt.executeUpdate(s);
 			return i==1;
@@ -46,8 +47,8 @@ public class DataBase {
 		return false;
 	}
 	
-	boolean Login(String id, String ps) {
-		String s = "SELECT * FROM userData WHERE user_id = '" + id + "';";
+	public boolean Login(String id, String ps) {
+		String s = "SELECT * FROM data WHERE userID = '" + id + "';";
 		String chk_ps = null;
 		try {
 			ResultSet save = stmt.executeQuery(s);
@@ -63,7 +64,15 @@ public class DataBase {
 		return false;
 		
 	}
-	
+	public void closedb() {
+		try {
+			stmt.close();
+			con.close();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 	public static String testSHA256(String pwd) {
 		try{
 

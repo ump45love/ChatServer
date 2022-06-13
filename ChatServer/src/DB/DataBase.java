@@ -12,18 +12,47 @@ public class DataBase {
 	Statement stmt;
 	public DataBase(String url,String id,String ps) {
 		try {
-			Class.forName("com.mysql.jdbc.Driver");
 			con = DriverManager.getConnection(url,id,ps);
 			stmt = con.createStatement();
-		} catch (ClassNotFoundException | SQLException e) {
+		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
+	public boolean DeleteData(String id) {
+		String s = "DELETE FROM data WHERE userID = '"+id +"';";
+		try {
+			int i = stmt.executeUpdate(s);
+			return i==1;
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return false;
+		
+	}
+	
+	public boolean CheckData(String id) {
+		String s = "SELECT * FROM data WHERE userID = '" + id + "';";
+		String chk_id=null;
+		try {
+			ResultSet save = stmt.executeQuery(s);
+			if(save.next()) {
+				chk_id = save.getString("userID");
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println(chk_id);
+		return !(chk_id == null);
+	}
+	
 	public boolean InsertData(String id, String ps) {
 		String sha = testSHA256(ps);
-		System.out.println(sha.length());
+		if(CheckData(id))
+			return false;
 		String s = "INSERT INTO data (userID, userPS) VALUES ('" + id + "','" + sha+"');";
 		try {
 			int i = stmt.executeUpdate(s);

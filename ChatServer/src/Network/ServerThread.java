@@ -12,12 +12,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import DB.DataBase;
+
 public class ServerThread extends Thread {
 	public enum State {WAITING,CONNECT_ROOM}
 	public static final byte GET_MESSAGE = 0;
 	public static final byte SIGN_UP = 1;
 	public static final byte CREATE_ROOM= 2;
 	public static final byte GET_ROOM_LIST = 3;
+	public static final byte GET_LOGIN = 4;
 	public static final char GET_IMAGE = 0;
 	public static final char GET_USER_LIST = 1;
 	  public static final char CHAT = 'a';
@@ -39,14 +42,17 @@ public class ServerThread extends Thread {
 	Socket clientSocket;
 	Socket clientImageSocket;
 	String nickName;
+	DataBase db;
+	String userId;
 	
 	
-	ServerThread(Socket socket,Socket imageSocket,ArrayList<ServerThread> userList,ArrayList<ChatRoom> chatRoomList){
+	ServerThread(Socket socket,Socket imageSocket,ArrayList<ServerThread> userList,ArrayList<ChatRoom> chatRoomList,DataBase db){
 		clientSocket = socket;
 		clientImageSocket = imageSocket;
 		this.userList = userList;
 		this.chatRoomNumber = 0;
 		this.chatRoomList = chatRoomList;
+		this.db = db;
 		ConnectClient();
 	}
 	void ConnectClient(){
@@ -63,11 +69,9 @@ public class ServerThread extends Thread {
 	}
 	
 	void SendMessage(String msg) {
-		byte[] data = msg.getBytes();
 		try {
 			out.writeByte(GET_MESSAGE);
-			out.write(data.length);
-			out.write(data);
+			out.writeBytes(msg);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -92,6 +96,52 @@ public class ServerThread extends Thread {
 		
 	}
 	
+	synchronized public void receiveLogin() {
+		String name =null;
+		String ps = null;
+		try {
+			name = in.readLine();
+			ps = in.readLine();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if(db.Login(name, ps)) {
+			try {
+				out.writeByte(4);
+				out.writeByte(1);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		else {
+			try {
+				out.writeByte(4);
+				out.writeByte(0);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	synchronized public void receiveRoomList() {
+		int size = chatRoomList.size();
+		try {
+			out.writeByte(3);
+			out.writeByte(chatRoomList.size());
+			for(int i =0; i<size; i++) {
+				final int j=i;
+				out.writeChars(chatRoomList.get(i).getRoomName());
+				out.writeChars(chatRoomList.get(i).getPassWord());
+				out.writeByte((int)userList.stream().filter((s) -> {return s.chatRoomNumber == j;}).count());
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	synchronized public void recievString() {
 		try {
 			int type = in.readByte();
@@ -106,6 +156,11 @@ public class ServerThread extends Thread {
 					 receiveCreateRoom();
 				break;
 				case GET_ROOM_LIST:
+					receiveRoomList();
+				break;
+				case GET_LOGIN:
+					receiveLogin();
+				break;
 
 			}
 		} catch (IOException e) {
@@ -114,7 +169,7 @@ public class ServerThread extends Thread {
 		}
 	}
 	
-	String receiveChat() {
+	synchronized String receiveChat() {
 		try {
 			return in.readLine();
 		} catch (IOException e) {
@@ -124,7 +179,7 @@ public class ServerThread extends Thread {
 		return null;
 	}
 	
-	void receiveCreateRoom() {
+	synchronized void receiveCreateRoom() {
 		String name =null;
 		String ps = null;
 		try {
@@ -137,8 +192,35 @@ public class ServerThread extends Thread {
 		ConnectChatRoomMessage();
 	}
 	
-	void receiveSignUp() {
-		
+	
+	
+	synchronized void receiveSignUp() {
+		String name =null;
+		String ps = null;
+		try {
+			name = in.readLine();
+			ps = in.readLine();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if(db.InsertData(name, ps)) {
+			try {
+				out.writeByte(1);
+				out.writeByte(1);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		else {
+			try {
+				out.writeByte(1);
+				out.writeByte(0);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 	void GetMessage(String msg) {
 		System.out.println("호로로롤" + msg);

@@ -71,7 +71,7 @@ public class ServerThread extends Thread {
 	void SendMessage(String msg) {
 		try {
 			out.writeByte(GET_MESSAGE);
-			out.writeBytes(msg);
+			out.writeUTF(msg);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -100,8 +100,8 @@ public class ServerThread extends Thread {
 		String name =null;
 		String ps = null;
 		try {
-			name = in.readLine();
-			ps = in.readLine();
+			name = in.readUTF();
+			ps = in.readUTF();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -132,8 +132,8 @@ public class ServerThread extends Thread {
 			out.writeByte(chatRoomList.size());
 			for(int i =0; i<size; i++) {
 				final int j=i;
-				out.writeChars(chatRoomList.get(i).getRoomName());
-				out.writeChars(chatRoomList.get(i).getPassWord());
+				out.writeUTF(chatRoomList.get(i).getRoomName());
+				out.writeUTF(chatRoomList.get(i).getPassWord());
 				out.writeByte((int)userList.stream().filter((s) -> {return s.chatRoomNumber == j;}).count());
 			}
 		} catch (IOException e) {
@@ -145,6 +145,7 @@ public class ServerThread extends Thread {
 	synchronized public void recievString() {
 		try {
 			int type = in.readByte();
+			System.out.println(type);
 			switch(type) {
 				case GET_MESSAGE:
 					sendMessageToClient(receiveChat());
@@ -163,6 +164,7 @@ public class ServerThread extends Thread {
 				break;
 
 			}
+			System.out.println("시발");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -171,7 +173,7 @@ public class ServerThread extends Thread {
 	
 	synchronized String receiveChat() {
 		try {
-			return in.readLine();
+			return in.readUTF();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -183,8 +185,8 @@ public class ServerThread extends Thread {
 		String name =null;
 		String ps = null;
 		try {
-			name = in.readLine();
-			ps = in.readLine();
+			name = in.readUTF();
+			ps = in.readUTF();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -197,16 +199,21 @@ public class ServerThread extends Thread {
 	synchronized void receiveSignUp() {
 		String name =null;
 		String ps = null;
+		System.out.println("회원가입");
 		try {
-			name = in.readLine();
-			ps = in.readLine();
+			name = in.readUTF();
+			ps = in.readUTF();
+			System.out.println(name + "a " + ps);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		if(db.InsertData(name, ps)) {
+			System.out.println("성공");
 			try {
 				out.writeByte(1);
+				out.flush();
 				out.writeByte(1);
+				out.flush();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -214,6 +221,7 @@ public class ServerThread extends Thread {
 		}
 		else {
 			try {
+				System.out.println("실패");
 				out.writeByte(1);
 				out.writeByte(0);
 			} catch (IOException e) {

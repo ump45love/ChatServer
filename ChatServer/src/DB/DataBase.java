@@ -78,11 +78,11 @@ public class DataBase {
 	
 	public boolean Login(String id, String ps) {
 		String s = "SELECT * FROM data WHERE userID = '" + id + "';";
-		String chk_ps = null;
+		String chk_ps = new String();
 		try {
 			ResultSet save = stmt.executeQuery(s);
 			if(save.next()) {
-				chk_ps = save.getString("user_ps");
+				chk_ps = save.getString("userPS");
 			}
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block

@@ -15,29 +15,31 @@ public class ReadImage {
 	FileInputStream read;
 	byte data[];
 	
-	ReadImage(String dir){
-		try {
-			read = new FileInputStream(dir);
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		Thread run = new Thread(()->{
-			data=null;
-			try {
-				data = read.readAllBytes();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		});
-		run.start();
+	public ReadImage(){
+		
 	}
 	
-	byte[] Getbyte() {
+	public ReadImage(String dir){
+		SetImage(dir);
+	}
+	
+	public byte[] Getbyte() {
 		return data;
 	}
 	
-	Image GetImage() {
+	public boolean SetImage(String dir) {
+		try {
+			read = new FileInputStream(dir);
+			data = read.readAllBytes();
+			return true;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	public Image GetImage() {
 	      ByteArrayInputStream bis = new ByteArrayInputStream(data);
 	      BufferedImage image = null;
 		try {

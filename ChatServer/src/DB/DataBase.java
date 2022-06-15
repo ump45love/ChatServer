@@ -1,5 +1,6 @@
 package DB;
 
+import java.awt.Image;
 import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -74,6 +75,36 @@ public class DataBase {
 			e.printStackTrace();
 		}
 		return false;
+	}
+	
+	public String getNickname(String id) {
+		String s = "SELECT * FROM data WHERE userID = '" + id + "';";
+		String nickname= new String();
+		try {
+			ResultSet save = stmt.executeQuery(s);
+			if(save.next()) {
+				nickname = save.getString("nickname");
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return nickname;
+	}
+	
+	public String getImage(String id) {
+		String s = "SELECT * FROM data WHERE userID = '" + id + "';";
+		String dir= new String();
+		try {
+			ResultSet save = stmt.executeQuery(s);
+			if(save.next()) {
+				dir= save.getString("imageDir");
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return dir;
 	}
 	
 	public boolean Login(String id, String ps) {

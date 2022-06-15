@@ -14,6 +14,7 @@ import DB.DataBase;
 
 public class Server {
 	ArrayList<ServerThread> userList;
+	ArrayList<ImageServerThread> imgUserList;
 	ArrayList<ChatRoom> chatRoomList;
 	Socket clientSocket;
 	Socket clientImageSocket;
@@ -29,7 +30,9 @@ public class Server {
 		port = port_;
 	}
 	public void ConnectClients() {
+		int data = 0;
 		userList = new ArrayList<ServerThread>();
+		imgUserList = new ArrayList<ImageServerThread>();
 		chatRoomList = new ArrayList<ChatRoom>();
 		db = new DataBase(url,"ump45","fjqTMlsdlekqb2@");
 		try {serverSocket = new ServerSocket(port);
@@ -40,7 +43,8 @@ public class Server {
 			try {
 				clientSocket = serverSocket.accept();
 				clientImageSocket = serverImageSocket.accept();
-				ServerThread thread = new ServerThread(clientSocket,clientImageSocket,userList,chatRoomList,db);
+				ImageServerThread threadImg = new ImageServerThread(clientSocket,imgUserList,chatRoomList,db,data++);
+				ServerThread thread = new ServerThread(clientSocket,userList,chatRoomList,db,data, threadImg);
 				userList.add(thread);
 				thread.start();
 			} catch (IOException e) {

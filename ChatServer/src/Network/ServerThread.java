@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 import DB.DataBase;
 
 public class ServerThread extends Thread {
-	public enum State {WAITING,CONNECT_ROOM}
 	public static final byte GET_MESSAGE = 0;
 	public static final byte SIGN_UP = 1;
 	public static final byte CREATE_ROOM= 2;
@@ -23,16 +22,10 @@ public class ServerThread extends Thread {
 	public static final byte GET_LOGIN = 4;
 	public static final char GET_IMAGE = 0;
 	public static final char GET_USER_LIST = 1;
-	  public static final char CHAT = 'a';
-	  public static final char IMAGE = 'b';
-	  public static final char USER_DATA = 'c';
-	  public static final char ROOM_CREATE = 'd';
-	  public static final char ROOM_CONNECT= 'e';
-	  public static final char ROOM_OUT = 'f';
-	  public static final char SERVER_WARNING = 'g';
 
 	ArrayList<ServerThread> userList;
 	ArrayList<ChatRoom> chatRoomList;
+	ImageServerThread imgServerThread;
 	DataInputStream in;
 	DataOutputStream out;
 	DataInputStream imageIn;
@@ -40,19 +33,21 @@ public class ServerThread extends Thread {
 	int chatRoomNumber;
 	State state;
 	Socket clientSocket;
-	Socket clientImageSocket;
 	String nickName;
 	DataBase db;
 	String userId;
+	int data;
+	String id;
 	
 	
-	ServerThread(Socket socket,Socket imageSocket,ArrayList<ServerThread> userList,ArrayList<ChatRoom> chatRoomList,DataBase db){
+	ServerThread(Socket socket,ArrayList<ServerThread> userList,ArrayList<ChatRoom> chatRoomList,DataBase db,int data,ImageServerThread imgServerThread){
 		clientSocket = socket;
-		clientImageSocket = imageSocket;
+		this.imgServerThread = imgServerThread;
 		this.userList = userList;
 		this.chatRoomNumber = 0;
 		this.chatRoomList = chatRoomList;
 		this.db = db;
+		this.data=data;
 		ConnectClient();
 	}
 	void ConnectClient(){
@@ -68,9 +63,10 @@ public class ServerThread extends Thread {
 		}
 	}
 	
-	void SendMessage(String msg) {
+	void SendMessage(String msg,String id) {
 		try {
 			out.writeByte(GET_MESSAGE);
+			out.writeUTF(id);
 			out.writeUTF(msg);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -113,6 +109,10 @@ public class ServerThread extends Thread {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			nickName = db.getNickname(id);
+			id = name;
+			imgServerThread.nickName = nickName;
+			imgServerThread.userId = id;
 		}
 		else {
 			try {
@@ -148,7 +148,7 @@ public class ServerThread extends Thread {
 			System.out.println(type);
 			switch(type) {
 				case GET_MESSAGE:
-					sendMessageToClient(receiveChat());
+					receiveChat();
 				break;
 				case SIGN_UP:
 					receiveSignUp();
@@ -168,17 +168,19 @@ public class ServerThread extends Thread {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			Disconnect();
 		}
 	}
 	
-	synchronized String receiveChat() {
+	synchronized void receiveChat() {
 		try {
-			return in.readUTF();
+			String id = in.readUTF();
+			String content = in.readUTF();
+			sendMessageToClient(content,id);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return null;
 	}
 	
 	synchronized void receiveCreateRoom() {
@@ -230,43 +232,15 @@ public class ServerThread extends Thread {
 			}
 		}
 	}
-	void GetMessage(String msg) {
-		System.out.println("호로로롤" + msg);
-		switch (msg.charAt(0)) {
-		case (CHAT):
-			if(state == State.CONNECT_ROOM)
-				sendMessageToClient(msg.substring(1));
-			break;
-		case (IMAGE):
-			if(state == State.CONNECT_ROOM)
-			//이미지 송신
-			break;
-		case (USER_DATA):
-			if(state == State.CONNECT_ROOM)
-			//유저데이터 송신
-			break;
-		case (ROOM_CREATE):
-			if(state == State.WAITING)
-			break;
-		case (ROOM_CONNECT):
-			if(state == State.WAITING) {
-				ConnectChatRoom(Integer.parseInt(msg.substring(1)));
-				ConnectChatRoomMessage();
-			}
-			break;
-		case (ROOM_OUT):
-			if(state == State.CONNECT_ROOM)
-				//방나감
-			break;
-		default:
-			break;//아무것도 안함
-		}
-	}
+
 	
 	
-	void sendMessageToClient(String msg) {
+	void sendMessageToClient(String msg,String id) {
 		List<ServerThread> array = userList.stream().filter(s -> s.chatRoomNumber == this.chatRoomNumber).collect(Collectors.toList());
-		array.forEach(s -> SendMessage(msg));
+		if(nickName.isEmpty())
+			array.forEach(s -> SendMessage(msg,id));
+		else
+			array.forEach(s -> SendMessage(msg,nickName));
 	}
 	
 	//
@@ -294,14 +268,27 @@ public class ServerThread extends Thread {
 	
 	
 	void ConnectChatRoom(int chatRoomNumber) {
-			state = State.CONNECT_ROOM;
 			this.chatRoomNumber = chatRoomNumber;
-			sendMessageToClient(ConnectChatRoomMessage());
+			imgServerThread.chatRoomNumber= chatRoomNumber;
+			if(nickName.isEmpty())
+				sendMessageToClient(ConnectChatRoomMessage(),id);
+			else
+				sendMessageToClient(ConnectChatRoomMessage(),nickName);
 	}
 
 
 	String ConnectChatRoomMessage() {
-		return ROOM_CONNECT + nickName + "님이 입장하셨습니다.";
+		if(nickName.isEmpty())
+			return id + "님이 입장하셨습니다.";
+		return nickName + "님이 입장하셨습니다.";
+	}
+	
+	void Disconnect() {
+		for(int i =0; i<userList.size(); i++) {
+			if(userList.get(i).data == this.data)
+				userList.get(i).stop();
+				userList.remove(i);
+		}
 	}
 
 	 @Override
@@ -312,5 +299,6 @@ public class ServerThread extends Thread {
 			 recievString();
 		 }
 	  }
+
 
 }

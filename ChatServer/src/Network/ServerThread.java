@@ -20,6 +20,8 @@ public class ServerThread extends Thread {
 	public static final byte CREATE_ROOM= 2;
 	public static final byte GET_ROOM_LIST = 3;
 	public static final byte GET_LOGIN = 4;
+	public static final byte CONNECT_ROOM= 5;
+	public static final byte NICK_CHANGE=6;
 	public static final char GET_IMAGE = 0;
 	public static final char GET_USER_LIST = 1;
 
@@ -48,100 +50,23 @@ public class ServerThread extends Thread {
 		this.chatRoomList = chatRoomList;
 		this.db = db;
 		this.data=data;
+		this.nickName = new String();
 		ConnectClient();
 	}
 	void ConnectClient(){
 		try {
+			System.out.println("성공");
 			out = new DataOutputStream(clientSocket.getOutputStream());
 			in = new DataInputStream(clientSocket.getInputStream());
 			imageOut = new DataOutputStream(clientSocket.getOutputStream());
 			imageIn = new DataInputStream(clientSocket.getInputStream());
-			state = State.WAITING; 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
-	void SendMessage(String msg,String id) {
-		try {
-			out.writeByte(GET_MESSAGE);
-			out.writeUTF(id);
-			out.writeUTF(msg);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}	
-	
-	
-	synchronized public void recievImage() {
-		int type = 0;
-		try {
-			type = imageIn.readByte();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		switch(type) {
-			case GET_IMAGE:
-				break;
-			case GET_USER_LIST:
-				break;
-		}
-		
-	}
-	
-	synchronized public void receiveLogin() {
-		String name =null;
-		String ps = null;
-		try {
-			name = in.readUTF();
-			ps = in.readUTF();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		if(db.Login(name, ps)) {
-			try {
-				out.writeByte(4);
-				out.writeByte(1);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			nickName = db.getNickname(id);
-			id = name;
-			imgServerThread.nickName = nickName;
-			imgServerThread.userId = id;
-		}
-		else {
-			try {
-				out.writeByte(4);
-				out.writeByte(0);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-	}
-	
-	synchronized public void receiveRoomList() {
-		int size = chatRoomList.size();
-		try {
-			out.writeByte(3);
-			out.writeByte(chatRoomList.size());
-			for(int i =0; i<size; i++) {
-				final int j=i;
-				out.writeUTF(chatRoomList.get(i).getRoomName());
-				out.writeUTF(chatRoomList.get(i).getPassWord());
-				out.writeByte((int)userList.stream().filter((s) -> {return s.chatRoomNumber == j;}).count());
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
+
 	synchronized public void recievString() {
 		try {
 			int type = in.readByte();
@@ -162,9 +87,14 @@ public class ServerThread extends Thread {
 				case GET_LOGIN:
 					receiveLogin();
 				break;
+				case CONNECT_ROOM:
+					ConnectRoom();
+				break;
+				case NICK_CHANGE:
+					chageNickName();
+				break;
 
 			}
-			System.out.println("시발");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -172,11 +102,102 @@ public class ServerThread extends Thread {
 		}
 	}
 	
+	
+	void SendMessage(String msg,String id) {
+		try {
+			out.writeByte(GET_MESSAGE);
+			out.writeUTF(id);
+			out.writeUTF(msg);
+			out.flush();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}	
+	
+	synchronized public void chageNickName() {
+		try {
+			String s = in.readUTF();
+			db.setNickname(id, s);
+			nickName = db.getNickname(id);
+			imgServerThread.nickName = nickName;
+			System.out.println("닉변경완료");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	
+	synchronized public void receiveLogin() {
+		String name =null;
+		String ps = null;
+		try {
+			name = in.readUTF();
+			ps = in.readUTF();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if(db.Login(name, ps)) {
+			try {
+				out.writeByte(4);
+				out.writeByte(1);
+				out.flush();
+				id = name;
+				imgServerThread.userId = id;
+				nickName = db.getNickname(id);
+				imgServerThread.nickName = nickName;
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		else {
+			try {
+				out.writeByte(4);
+				out.writeByte(0);
+				out.flush();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	synchronized public void receiveRoomList() {
+		int size = chatRoomList.size();
+		UpdateChatRoom();
+		try {
+			out.writeByte(3);
+			out.writeByte(chatRoomList.size());
+			for(ChatRoom data : chatRoomList) {
+				out.writeUTF(data.getRoomName());
+				out.writeUTF(data.getPassWord());
+				out.writeByte((int)userList.stream().filter((s) -> {return s.chatRoomNumber == data.getRoomNumber();}).count());
+				out.writeByte(data.getRoomNumber());
+				out.flush();
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	synchronized public void ConnectRoom() {
+		try {
+			int num = in.readByte();
+			ConnectChatRoom(num);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	synchronized void receiveChat() {
 		try {
-			String id = in.readUTF();
+			System.out.println("번호"+chatRoomNumber);
 			String content = in.readUTF();
-			sendMessageToClient(content,id);
+			sendMessageToClient(content);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -193,7 +214,6 @@ public class ServerThread extends Thread {
 			e.printStackTrace();
 		}
 		ConnectChatRoom(CreateChatRoom(name, ps));
-		ConnectChatRoomMessage();
 	}
 	
 	
@@ -226,6 +246,7 @@ public class ServerThread extends Thread {
 				System.out.println("실패");
 				out.writeByte(1);
 				out.writeByte(0);
+				out.flush();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -235,35 +256,29 @@ public class ServerThread extends Thread {
 
 	
 	
-	void sendMessageToClient(String msg,String id) {
-		List<ServerThread> array = userList.stream().filter(s -> s.chatRoomNumber == this.chatRoomNumber).collect(Collectors.toList());
-		if(nickName.isEmpty())
-			array.forEach(s -> SendMessage(msg,id));
+	void sendMessageToClient(String msg) {
+		List<ServerThread> array = userList.stream().filter(s -> s.chatRoomNumber == this.chatRoomNumber).filter(s-> s.data != this.data).collect(Collectors.toList());
+		if(nickName.isEmpty()) {
+			array.forEach(s -> {s.SendMessage(msg,id);});
+			System.out.println("전송완료");
+		}
 		else
-			array.forEach(s -> SendMessage(msg,nickName));
+			array.forEach(s -> {s.SendMessage(msg,nickName);});
 	}
 	
-	//
-	
-		//이미지 송신
-	
-	//
-	
-	//
-	
-		//유저데이터 송신
 
-	//
-	
 	
 	int CreateChatRoom(String name, String ps) {
+		int number = 0;
 		if(chatRoomList.size() == 0) {
-			chatRoomList.add(new ChatRoom(1,ps,name));
+			number=1;
+			chatRoomList.add(new ChatRoom(number,ps,name));
 		}
 		else {
-			chatRoomList.add(new ChatRoom(Collections.max(chatRoomList).getRoomNumber()+1,ps,name));
+			number = Collections.max(chatRoomList).getRoomNumber()+1;
+			chatRoomList.add(new ChatRoom(number,ps,name));
 		}
-		return chatRoomList.get(chatRoomList.size()-1).getRoomNumber();
+		return number;
 	}
 	
 	
@@ -271,9 +286,10 @@ public class ServerThread extends Thread {
 			this.chatRoomNumber = chatRoomNumber;
 			imgServerThread.chatRoomNumber= chatRoomNumber;
 			if(nickName.isEmpty())
-				sendMessageToClient(ConnectChatRoomMessage(),id);
+				sendMessageToClient(ConnectChatRoomMessage());
 			else
-				sendMessageToClient(ConnectChatRoomMessage(),nickName);
+				sendMessageToClient(ConnectChatRoomMessage());
+			imgServerThread.userListimg.stream().filter(s->s.chatRoomNumber == this.chatRoomNumber).forEach(s->s.receiveUserList());
 	}
 
 
@@ -282,12 +298,26 @@ public class ServerThread extends Thread {
 			return id + "님이 입장하셨습니다.";
 		return nickName + "님이 입장하셨습니다.";
 	}
-	
 	void Disconnect() {
-		for(int i =0; i<userList.size(); i++) {
-			if(userList.get(i).data == this.data)
-				userList.get(i).stop();
+		for(ServerThread i: userList) {
+			if(i.data == this.data) {
+				imgServerThread.userListimg.stream().filter(s->s.chatRoomNumber == this.chatRoomNumber).forEach(s->s.receiveUserList());
 				userList.remove(i);
+				i.stop();
+			}
+		}
+	}
+	void UpdateChatRoom() {
+		for(ChatRoom i : chatRoomList) {
+			boolean chk = true;
+			for(ServerThread j: userList) {
+				if(i.getRoomNumber() == j.chatRoomNumber) {
+					chk = false;
+					break;
+				}
+			}
+			if(chk)
+				chatRoomList.remove(i);
 		}
 	}
 

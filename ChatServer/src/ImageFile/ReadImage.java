@@ -28,15 +28,18 @@ public class ReadImage {
 	}
 	
 	public boolean SetImage(String dir) {
-		try {
-			read = new FileInputStream(dir);
-			data = read.readAllBytes();
-			return true;
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return false;
+			try {
+				read = new FileInputStream(dir);
+				data = read.readAllBytes();
+				return true;
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			return false;
 	}
 	
 	public Image GetImage() {

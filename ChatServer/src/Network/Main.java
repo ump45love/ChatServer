@@ -7,7 +7,7 @@ import java.util.Scanner;
 public class Main {
 	
 	public static void main(String[] args) {
-		Server a = new Server(5000);
+		Server a = new Server(5123);
 		a.ConnectClients();
 	}
 

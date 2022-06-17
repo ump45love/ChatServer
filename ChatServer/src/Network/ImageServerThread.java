@@ -14,24 +14,18 @@ import java.util.stream.Collectors;
 
 import DB.DataBase;
 import ImageFile.ReadImage;
+import ImageFile.WriteImage;
 
 public class ImageServerThread extends Thread {
-	public static final byte GET_MESSAGE = 0;
-	public static final byte SIGN_UP = 1;
-	public static final byte CREATE_ROOM= 2;
-	public static final byte GET_ROOM_LIST = 3;
-	public static final byte GET_LOGIN = 4;
-	public static final char GET_IMAGE = 0;
-	public static final char GET_USER_LIST = 1;
+	public static final byte GET_IMAGE = 0;
+	public static final byte GET_USER_PROFILE = 1;
+	public static final byte GET_USER_LIST = 2;
 
 	ArrayList<ImageServerThread> userListimg;
 	ArrayList<ChatRoom> chatRoomList;
-	DataInputStream in;
-	DataOutputStream out;
 	DataInputStream imageIn;
 	DataOutputStream imageOut;
 	int chatRoomNumber;
-	State state;
 	Socket clientImageSocket;
 	String nickName;
 	DataBase db;
@@ -47,36 +41,41 @@ public class ImageServerThread extends Thread {
 		this.db = db;
 		this.data=data;
 		this.readImage = new ReadImage();
+		this.nickName = new String();
 		ConnectClient();
 	}
 	void ConnectClient(){
 		try {
-			out = new DataOutputStream(clientImageSocket.getOutputStream());
-			in = new DataInputStream(clientImageSocket.getInputStream());
+			System.out.println("성공");
 			imageOut = new DataOutputStream(clientImageSocket.getOutputStream());
 			imageIn = new DataInputStream(clientImageSocket.getInputStream());
-			state = State.WAITING; 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
-	void SendMessage(String msg,String id) {
+	
+	synchronized public void reciveProfileImage() {
 		try {
-			out.writeByte(GET_MESSAGE);
-			out.writeUTF(id);
-			out.writeUTF(msg);
+			String name = imageIn.readUTF();
+			int size = imageIn.readInt();
+			byte[] data = new byte[size];
+			imageIn.read(data);
+			WriteImage download = new WriteImage(data,userId+name);
+			download.Download();
+			db.SetProfileImage(userId, "./"+userId+name);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}	
+	}
 	
 	
 	synchronized public void recievImage() {
 		int type = 0;
 		try {
+			imageOut.flush();
 			type = imageIn.readByte();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -86,64 +85,57 @@ public class ImageServerThread extends Thread {
 		switch(type) {
 			case GET_IMAGE:
 				break;
+			case GET_USER_PROFILE:
+				reciveProfileImage();
+				break;
 			case GET_USER_LIST:
+				receiveUserList();
 				break;
 		}
 		
 	}
 	
 	void receiveUserList() {
-		int count = (int) userListimg.stream().filter(s -> s.chatRoomNumber == this.chatRoomNumber).count();
+		userListimg.stream().forEach((s) -> {System.out.println(s.userId+s.chatRoomNumber);});
+		List<ImageServerThread> data = this.userListimg.stream().filter(s -> s.chatRoomNumber == this.chatRoomNumber).collect(Collectors.toList());
+		int count = (int)data.stream().count();
 		try {
 			imageOut.writeByte(2);
 			imageOut.writeByte(count);
-			for(int i = 0; i< count; i++) {
-				if(nickName.isEmpty())
-					imageOut.writeUTF(userId);
+			for(ImageServerThread save :data) {
+				if( save.nickName.isEmpty())
+					 imageOut.writeUTF( save.userId);
 				else
-					imageOut.writeUTF(nickName);
-				String dir = db.getImage(userId);
-				if(readImage.SetImage(dir)) {
-					imageOut.writeInt(readImage.Getbyte().length);
-					imageOut.write(readImage.Getbyte());
+					 imageOut.writeUTF( save.nickName);
+				String dir =  save.db.getImage( save.userId);
+				if(dir.isEmpty()) {
+					 imageOut.writeInt(0);
 				}
+				else {
+					save.readImage.SetImage(dir);
+					imageOut.writeInt( save.readImage.Getbyte().length);
+					imageOut.flush();
+					System.out.println("크기:"+save.readImage.Getbyte().length);
+					imageOut.write( save.readImage.Getbyte());
+					imageOut.flush();
+				}
+				
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		System.out.println("유저리스트 완료");
 	}
-	
-
-
-
-	
-
-	void sendMessageToClient(String msg,String id) {
-		List<ImageServerThread> array = userListimg.stream().filter(s -> s.chatRoomNumber == this.chatRoomNumber).collect(Collectors.toList());
-		array.forEach(s -> SendMessage(msg,id));
-	}
-	
-	//
-	
-		//이미지 송신
-	
-	//
-	
-	//
-	
-		//유저데이터 송신
-
-	//
-	
 	
 
 
 	void Disconnect() {
-		for(int i =0; i<userListimg.size(); i++) {
-			if(userListimg.get(i).data == this.data)
-				userListimg.get(i).stop();
-			userListimg.remove(i);
+		for(ImageServerThread i: userListimg) {
+			if(i.data == this.data) {
+				userListimg.remove(i);
+				i.stop();
+			}
 		}
 	}
 

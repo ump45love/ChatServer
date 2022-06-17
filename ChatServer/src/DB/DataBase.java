@@ -11,10 +11,20 @@ import java.sql.Statement;
 public class DataBase {
 	Connection con;
 	Statement stmt;
+	
 	public DataBase(String url,String id,String ps) {
 		try {
 			con = DriverManager.getConnection(url,id,ps);
 			stmt = con.createStatement();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	public void close() {
+		try {
+			con.close();
+			stmt.close();
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -65,8 +75,20 @@ public class DataBase {
 		}
 	}
 	
-	public boolean ImageInsert(String id,String dir) {
+	public boolean SetProfileImage(String id,String dir) {
 		String s = "UPDATE data SET imageDIR =  " + "'"+dir+"' WHERE userID = "+"'"+id+"';";
+		try {
+			int i =stmt.executeUpdate(s);
+			return i==1;
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	public boolean setNickname(String id,String nickname) {
+		String s = "UPDATE data SET nickname =  " + "'"+nickname+"' WHERE userID = "+"'"+id+"';";
 		try {
 			int i =stmt.executeUpdate(s);
 			return i==1;
@@ -89,6 +111,8 @@ public class DataBase {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		if(nickname == null)
+			return new String();
 		return nickname;
 	}
 	
@@ -102,8 +126,12 @@ public class DataBase {
 			}
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
+			System.out.println("오류 아이디:" + id);
 			e.printStackTrace();
 		}
+		if(dir == null)
+			return new String();
+		
 		return dir;
 	}
 	
@@ -127,7 +155,6 @@ public class DataBase {
 	public void closedb() {
 		try {
 			stmt.close();
-			con.close();
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

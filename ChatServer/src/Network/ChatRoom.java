@@ -7,8 +7,8 @@ public class ChatRoom implements Comparable<ChatRoom >{
 	
 	ChatRoom(){
 		roomNumber = 0;
-		passWord = null;
-		roomName =null;
+		passWord = new String();
+		roomName = new String();
 	}	
 	ChatRoom(int num,String passWord,String name){
 		roomNumber = num;

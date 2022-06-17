@@ -67,7 +67,7 @@ public class ServerThread extends Thread {
 	}
 	
 
-	synchronized public void recievString() {
+	 public void recievString() {
 		try {
 			int type = in.readByte();
 			System.out.println(type);
@@ -115,7 +115,7 @@ public class ServerThread extends Thread {
 		}
 	}	
 	
-	synchronized public void chageNickName() {
+	 public void chageNickName() {
 		try {
 			String s = in.readUTF();
 			db.setNickname(id, s);
@@ -129,7 +129,7 @@ public class ServerThread extends Thread {
 	}
 	
 	
-	synchronized public void receiveLogin() {
+	 public void receiveLogin() {
 		String name =null;
 		String ps = null;
 		try {
@@ -163,10 +163,9 @@ public class ServerThread extends Thread {
 			}
 		}
 	}
-	
-	synchronized public void receiveRoomList() {
+	 public void receiveRoomList() {
+		 UpdateChatRoom();
 		int size = chatRoomList.size();
-		UpdateChatRoom();
 		try {
 			out.writeByte(3);
 			out.writeByte(chatRoomList.size());
@@ -181,9 +180,10 @@ public class ServerThread extends Thread {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+
 	}
 	
-	synchronized public void ConnectRoom() {
+	 public void ConnectRoom() {
 		try {
 			int num = in.readByte();
 			ConnectChatRoom(num);
@@ -193,7 +193,7 @@ public class ServerThread extends Thread {
 		}
 	}
 	
-	synchronized void receiveChat() {
+	 void receiveChat() {
 		try {
 			System.out.println("번호"+chatRoomNumber);
 			String content = in.readUTF();
@@ -204,7 +204,8 @@ public class ServerThread extends Thread {
 		}
 	}
 	
-	synchronized void receiveCreateRoom() {
+	 void receiveCreateRoom() {
+
 		String name =null;
 		String ps = null;
 		try {
@@ -218,7 +219,7 @@ public class ServerThread extends Thread {
 	
 	
 	
-	synchronized void receiveSignUp() {
+	 void receiveSignUp() {
 		String name =null;
 		String ps = null;
 		System.out.println("회원가입");
@@ -259,7 +260,8 @@ public class ServerThread extends Thread {
 	void sendMessageToClient(String msg) {
 		List<ServerThread> array = userList.stream().filter(s -> s.chatRoomNumber == this.chatRoomNumber).filter(s-> s.data != this.data).collect(Collectors.toList());
 		if(nickName.isEmpty()) {
-			array.forEach(s -> {s.SendMessage(msg,id);});
+			for(ServerThread s : array)
+				s.SendMessage(msg,id);
 			System.out.println("전송완료");
 		}
 		else
@@ -269,6 +271,7 @@ public class ServerThread extends Thread {
 
 	
 	int CreateChatRoom(String name, String ps) {
+
 		int number = 0;
 		if(chatRoomList.size() == 0) {
 			number=1;
@@ -279,17 +282,26 @@ public class ServerThread extends Thread {
 			chatRoomList.add(new ChatRoom(number,ps,name));
 		}
 		return number;
+		
 	}
 	
 	
 	void ConnectChatRoom(int chatRoomNumber) {
+			int save = this.chatRoomNumber;
 			this.chatRoomNumber = chatRoomNumber;
 			imgServerThread.chatRoomNumber= chatRoomNumber;
 			if(nickName.isEmpty())
 				sendMessageToClient(ConnectChatRoomMessage());
 			else
 				sendMessageToClient(ConnectChatRoomMessage());
-			imgServerThread.userListimg.stream().filter(s->s.chatRoomNumber == this.chatRoomNumber).forEach(s->s.receiveUserList());
+			List<ImageServerThread> t = imgServerThread.userListimg.stream().filter(s->s.chatRoomNumber == this.chatRoomNumber).collect(Collectors.toList());
+			for(ImageServerThread s: t)
+				s.receiveUserList();
+			if(save != 0) {
+				List<ImageServerThread> q = imgServerThread.userListimg.stream().filter(s->s.chatRoomNumber == save).collect(Collectors.toList());
+				for(ImageServerThread s : q)
+					s.receiveUserList();
+			}
 	}
 
 
@@ -301,13 +313,18 @@ public class ServerThread extends Thread {
 	void Disconnect() {
 		for(ServerThread i: userList) {
 			if(i.data == this.data) {
-				imgServerThread.userListimg.stream().filter(s->s.chatRoomNumber == this.chatRoomNumber).forEach(s->s.receiveUserList());
+				List<ImageServerThread> q = imgServerThread.userListimg.stream().filter(s->s.chatRoomNumber == this.chatRoomNumber).collect(Collectors.toList());
+				for(ImageServerThread s : q)
+					s.receiveUserList();
 				userList.remove(i);
 				i.stop();
 			}
 		}
 	}
+	
+
 	void UpdateChatRoom() {
+		ArrayList<ChatRoom> save = new ArrayList<ChatRoom>();
 		for(ChatRoom i : chatRoomList) {
 			boolean chk = true;
 			for(ServerThread j: userList) {
@@ -317,7 +334,10 @@ public class ServerThread extends Thread {
 				}
 			}
 			if(chk)
-				chatRoomList.remove(i);
+				save.add(i);
+		}
+		for(int i = 0; i< save.size(); i++) {
+			chatRoomList.remove(save.get(i));
 		}
 	}
 

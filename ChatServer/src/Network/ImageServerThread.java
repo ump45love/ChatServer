@@ -32,6 +32,7 @@ public class ImageServerThread extends Thread {
 	String userId;
 	int data;
 	ReadImage readImage;
+	static boolean wait;
 	
 	ImageServerThread(Socket imageSocket,ArrayList<ImageServerThread> userListimg,ArrayList<ChatRoom> chatRoomList,DataBase db,int data){
 		clientImageSocket = imageSocket;
@@ -42,6 +43,7 @@ public class ImageServerThread extends Thread {
 		this.data=data;
 		this.readImage = new ReadImage();
 		this.nickName = new String();
+		boolean w = false;
 		ConnectClient();
 	}
 	void ConnectClient(){
@@ -49,6 +51,7 @@ public class ImageServerThread extends Thread {
 			System.out.println("성공");
 			imageOut = new DataOutputStream(clientImageSocket.getOutputStream());
 			imageIn = new DataInputStream(clientImageSocket.getInputStream());
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -56,7 +59,7 @@ public class ImageServerThread extends Thread {
 	}
 	
 	
-	synchronized public void reciveProfileImage() {
+	public void reciveProfileImage() {
 		try {
 			String name = imageIn.readUTF();
 			int size = imageIn.readInt();
@@ -72,7 +75,7 @@ public class ImageServerThread extends Thread {
 	}
 	
 	
-	synchronized public void recievImage() {
+	 public void recievImage() {
 		int type = 0;
 		try {
 			imageOut.flush();
@@ -95,7 +98,16 @@ public class ImageServerThread extends Thread {
 		
 	}
 	
-	void receiveUserList() {
+	synchronized void receiveUserList() {
+		while(wait) {
+			try {
+				wait();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		wait = true;
 		userListimg.stream().forEach((s) -> {System.out.println(s.userId+s.chatRoomNumber);});
 		List<ImageServerThread> data = this.userListimg.stream().filter(s -> s.chatRoomNumber == this.chatRoomNumber).collect(Collectors.toList());
 		int count = (int)data.stream().count();
@@ -125,6 +137,8 @@ public class ImageServerThread extends Thread {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		wait = false;
+		notify();
 		System.out.println("유저리스트 완료");
 	}
 	

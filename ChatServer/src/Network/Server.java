@@ -21,7 +21,7 @@ public class Server {
 	ServerSocket serverSocket;
 	int port;
 	DataBase db;
-	final String url = "jdbc:mysql://lovecein4858.iptime.org:3306/serverdb?characterEncoding=UTF-8 & serverTimezone=UTC";
+	final String url = "jdbc:mysql://lovecein4858.iptime.org:3306/server?characterEncoding=UTF-8 & serverTimezone=UTC";
 	
 	
 	int PortNumber;
@@ -33,7 +33,7 @@ public class Server {
 		userList = new ArrayList<ServerThread>();
 		imgUserList = new ArrayList<ImageServerThread>();
 		chatRoomList = new ArrayList<ChatRoom>();
-		db = new DataBase(url,"ump45","fjqTMlsdlekqb2@");
+		db = new DataBase(url,"ump45","1234");
 		try {
 			serverSocket = new ServerSocket(port);
 			} 
